@@ -39,6 +39,8 @@
 #elif defined(__arm__) || defined(__aarch64__) || defined(_M_ARM) || \
     defined(_M_ARM64)
 #define ARCH_CPU_ARM
+#elif defined(__riscv) && (__riscv_xlen == 64)
+#define ARCH_CPU_RISCV
 #endif
 
 //
@@ -46,7 +48,7 @@
 //
 
 #if defined(__x86_64__) || defined(__aarch64__) || defined(_M_X64) || \
-    defined(_M_ARM64) || defined(__wasm64__)
+    defined(_M_ARM64) || defined(__wasm64__) || defined(ARCH_CPU_RISCV)
 #define ARCH_BITS_64
 #elif defined(__wasm32__)
 #define ARCH_BITS_32

@@ -259,7 +259,7 @@ struct _ListOpWriter
     }
     static void Write(Sdf_TextOutput& out, size_t indent, const T& item)
     {
-        Sdf_FileIOUtility::Write(out, indent, "%s", TfStringify(item).c_str());
+        Sdf_FileIOUtility::Puts(out, indent, TfStringify(item));
     }
 };
 
@@ -532,7 +532,9 @@ Sdf_FileIOUtility::WriteDefaultValue(
 
     // General case value to string conversion and write-out.
     std::string valueString = Sdf_FileIOUtility::StringFromVtValue(value, out);
-    Sdf_FileIOUtility::Write(out, 0, " = %s", valueString.c_str());
+    // Not through printf: formatted output is capped near 64 KB in the sandbox, which cut long arrays.
+    out.Write(" = ");
+    out.Write(valueString);
 }
 
 void

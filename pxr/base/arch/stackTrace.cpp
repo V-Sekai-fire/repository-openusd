@@ -878,6 +878,16 @@ nonLockingLinux__execve (const char *file,
         );
         result = __file_result;
     }
+#elif defined(ARCH_CPU_RISCV)
+    {
+        register long a0 asm ("a0") = (long)file;
+        register char* const* a1 asm ("a1") = argv;
+        register char* const* a2 asm ("a2") = envp;
+        register long a7 asm ("a7") = 221;
+        __asm__ __volatile__ ("ecall" : "+r" (a0)
+            : "r" (a1), "r" (a2), "r" (a7) : "memory");
+        result = a0;
+    }
 #elif defined(ARCH_CPU_INTEL) && defined(ARCH_BITS_64)
 
     /*

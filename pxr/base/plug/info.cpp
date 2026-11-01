@@ -17,11 +17,18 @@
 #include "pxr/base/tf/stopwatch.h"
 #include "pxr/base/work/dispatcher.h"
 #include "pxr/base/work/threadLimits.h"
+#include "pxr/base/plug/api.h"
 #include <fstream>
+#include <sstream>
 #include <regex>
 #include <set>
 
 PXR_NAMESPACE_OPEN_SCOPE
+
+// Gate 0G (interactor-dress-on): a guest without a filesystem registers its
+// plugInfo.json contents from memory. When set, the hook is asked first for
+// every plugInfo path; a non-null return is that file's contents.
+PLUG_API const char* (*Plug_InMemoryPlugInfoHook)(const char* pathname) = nullptr;
 
 namespace {
 
@@ -131,8 +138,12 @@ _ReadPlugInfoObject(const std::string& pathname, JsObject* result)
 {
     result->clear();
 
+    const char* inMemory = Plug_InMemoryPlugInfoHook
+        ? Plug_InMemoryPlugInfoHook(pathname.c_str()) : nullptr;
+    std::istringstream iss(inMemory ? inMemory : "");
     // The file may not exist or be readable.
     std::ifstream ifs;
+    if (!inMemory) {
 #if defined(ARCH_OS_WINDOWS)
     // XXX: This is a MSVC specific overload to std::ifstream::open which
     // supports std::wstring as an argument.
@@ -149,6 +160,8 @@ _ReadPlugInfoObject(const std::string& pathname, JsObject* result)
             Msg("Failed to open plugin info %s\n", pathname.c_str());
         return false;
     }
+    }
+    std::istream& in = inMemory ? static_cast<std::istream&>(iss) : ifs;
 
     // The Js library doesn't allow comments, but we'd like to allow them.
     // Strip comments, retaining empty lines so line numbers reported in parse
@@ -158,7 +171,7 @@ _ReadPlugInfoObject(const std::string& pathname, JsObject* result)
     //       calling JsParseStream() as of this writing.
     std::string line;
     std::vector<std::string> filtered;
-    while (getline(ifs, line)) {
+    while (getline(in, line)) {
         if (line.find('#') < line.find_first_not_of(" \t#"))
             line.clear();
         filtered.push_back(line);
